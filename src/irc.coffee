@@ -17,10 +17,10 @@ class IrcBot extends Adapter
       if not str?
         continue
       if user.room
-        console.log "#{user.room} #{str}"
+        @robot.logger.info "#{user.room} #{str}"
         @bot.say(user.room, str)
       else
-        console.log "#{user.name} #{str}"
+        @robot.logger.info "#{user.name} #{str}"
         @bot.say(user.name, str)
 
   notice: (user, strings...) ->
@@ -28,10 +28,10 @@ class IrcBot extends Adapter
       if not str?
         continue
       if user.room
-        console.log "notice #{user.room} #{str}"
+        @robot.logger.info "notice #{user.room} #{str}"
         @bot.notice(user.room, str)
       else
-        console.log "notice #{user.name} #{str}"
+        @robot.logger.info "notice #{user.name} #{str}"
         @bot.notice(user.name, str)
 
   reply: (user, strings...) ->
@@ -41,11 +41,11 @@ class IrcBot extends Adapter
   join: (channel) ->
     self = @
     @bot.join channel, () ->
-      console.log('joined %s', channel)
+      @robot.logger.info('joined %s', channel)
 
   part: (channel) ->
     @bot.part channel, () ->
-      console.log('left %s', channel)
+      @robot.logger.info('left %s', channel)
 
   run: ->
     self = @
@@ -61,7 +61,7 @@ class IrcBot extends Adapter
       unflood:  process.env.HUBOT_IRC_UNFLOOD?
       debug:    process.env.HUBOT_IRC_DEBUG?
       usessl:   process.env.HUBOT_IRC_USESSL?
-      userName: process.env.HUBOT_IRC_USERNAME?
+      userName: process.env.HUBOT_IRC_USERNAME
 
     client_options =
       userName: options.userName,
@@ -91,7 +91,7 @@ class IrcBot extends Adapter
             @join room
 
     bot.addListener 'message', (from, to, message) ->
-      console.log "From #{from} to #{to}: #{message}"
+      @robot.logger.info "From #{from} to #{to}: #{message}"
       
       user = self.userForName from
       unless user?
@@ -101,30 +101,30 @@ class IrcBot extends Adapter
 
       if to.match(/^[&#]/)
         user.room = to
-        console.log "#{to} <#{from}> #{message}"
+        @robot.logger.info "#{to} <#{from}> #{message}"
       else
         user.room = null
-        console.log "msg <#{from}> #{message}"
+        @robot.logger.info "msg <#{from}> #{message}"
 
       self.receive new Robot.TextMessage(user, message)
 
     bot.addListener 'error', (message) ->
-        console.error('ERROR: %s: %s', message.command, message.args.join(' '))
+        @robot.logger.error('ERROR: %s: %s', message.command, message.args.join(' '))
 
     bot.addListener 'pm', (nick, message) ->
-        console.log('Got private message from %s: %s', nick, message)
+        @robot.logger.info('Got private message from %s: %s', nick, message)
 
     bot.addListener 'join', (channel, who) ->
-        console.log('%s has joined %s', who, channel)
+        @robot.logger.info('%s has joined %s', who, channel)
 
     bot.addListener 'part', (channel, who, reason) ->
-        console.log('%s has left %s: %s', who, channel, reason)
+        @robot.logger.info('%s has left %s: %s', who, channel, reason)
 
     bot.addListener 'kick', (channel, who, _by, reason) ->
-        console.log('%s was kicked from %s by %s: %s', who, channel, _by, reason)
+        @robot.logger.info('%s was kicked from %s by %s: %s', who, channel, _by, reason)
 
     bot.addListener 'invite', (channel, from) ->
-      console.log('%s invite you to join %s', from, channel)
+      @robot.logger.info('%s invite you to join %s', from, channel)
       bot.join channel
 
     @bot = bot
