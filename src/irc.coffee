@@ -1,5 +1,5 @@
-# Hubot dependencies
-{Robot, Adapter, TextMessage, EnterMessage, LeaveMessage, Response} = require 'hubot'
+    # Hubot dependencies
+{Robot, Adapter, TextMessage, EnterMessage, LeaveMessage, Response, CatchAllMessage} = require 'hubot'
 
 # Irc library
 Irc = require 'irc'
@@ -179,6 +179,7 @@ class IrcBot extends Adapter
           message = "#{to}: #{message}"
         console.log "msg <#{from}> #{message}"
 
+      user.pm = false
       self.receive new TextMessage(user, message)
 
     bot.addListener 'error', (message) ->
@@ -191,7 +192,7 @@ class IrcBot extends Adapter
       if message.slice(0, nameLength).toLowerCase() != options.nick.toLowerCase()
         message = "#{options.nick} #{message}"
 
-      self.receive new TextMessage({reply_to: nick, name: nick}, message)
+      self.receive new TextMessage({reply_to: nick, name: nick, pm:true}, message)
 
     bot.addListener 'join', (channel, who) ->
       console.log('%s has joined %s', who, channel)
@@ -203,13 +204,35 @@ class IrcBot extends Adapter
       user = self.createUser '', who
       self.receive new LeaveMessage(user)
 
+    bot.addListener 'quit', (who, reason, channel, message) ->
+      console.log('%s has quit %s: %s', who, channel, reason)
+      user = self.createUser '', who
+      self.receive new LeaveMessage(user)
+    
     bot.addListener 'kick', (channel, who, _by, reason) ->
       console.log('%s was kicked from %s by %s: %s', who, channel, _by, reason)
-
+      self.receive new CatchAllMessage("kick: #{who} #{channel}")
+    
     bot.addListener 'invite', (channel, from) ->
       console.log('%s invite you to join %s', from, channel)
-      bot.join channel
+      #bot.join channel
 
+    bot.addListener 'nick',  (oldnick, newnick, channels, message) ->
+      console.log('%s has changed nick to %s', oldnick, newnick)
+      self.receive new CatchAllMessage("nick: #{oldnick} #{newnick}")
+
+    bot.addListener 'action',  (nick, channels, message) ->
+      console.log('action: %s %s', nick, message)
+      if options.nick.toLowerCase() == channels.toLowerCase()
+        # this is a private message,
+        user = {reply_to: nick, name: nick, pm:true}
+      else
+        user = self.createUser channels, nick
+        user.pm = false
+
+      self.receive new TextMessage(user,"action: #{nick} #{message}")
+   
+            
     @bot = bot
 
     self.emit "connected"
